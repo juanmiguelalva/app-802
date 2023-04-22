@@ -25,6 +25,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        if(config('app.env') === 'production') {
+            \URL::forceScheme('https');
+        }
         Paginator::useBootstrap();
         Validator::extend('file_extension', function ($attribute, $value, $parameters, $validator) {
             $extension = $value->getClientOriginalExtension();
