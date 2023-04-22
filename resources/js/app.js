@@ -1,3 +1,10 @@
+window.addEventListener("load",() =>{
+  $('#preloader').delay(150).fadeOut('slow', function() {
+    $(this).remove();
+  });
+})
+
+
 $.js = function(el) {
   return $('[data-js=' + el + ']')
 };
@@ -45,29 +52,7 @@ function carousel() {
 }
 carousel();
 
-function getPageList(totalPages, page, maxLength){
-  function range(start,end){
-    return Array.from(Array(end-start+1),(_,i)=> i +start);
-  }
 
-  var sideWitdh = maxLength < 9 ? 1 : 2;
-  var leftWidth = (maxLength -sideWitdh*2-3) >> 1;
-  var rightWidth = (maxLength -sideWitdh*2-3) >> 1;
-  
-  if(totalPages <= maxLength){
-    return range (1,totalPages);
-  }
-
-  if(page <= maxLength - sideWitdh - 1 - rightWidth){
-    return range(1,maxLength-sideWitdh-1).concat(0,range(totalPages-sideWitdh+1, totalPages));
-  }
-
-  if(page >= totalPages - sideWitdh - 1 - rightWidth){
-    return range(1,sideWitdh).concat(0,range(totalPages-sideWitdh-1, - rightWidth - leftWidth, totalPages));
-  }
-
-    return range(1, sideWitdh).concat(0, range(page - leftWidth, page + rightWidth),0, range(totalPages - sideWitdh + 1, totalPages));
-}
 
 
 // Horarios
@@ -103,15 +88,6 @@ selectCiclo.addEventListener('change', () => {
 
 !(function($) {
   "use strict";
-  
-    // Preloader
-    $(window).on('load', function() {
-      if ($('#preloader').length) {
-        $('#preloader').delay(50).fadeOut('slow', function() {
-          $(this).remove();
-        });
-      }
-    });
 
   $('form.php-email-form').submit(function(e) {
     e.preventDefault();
@@ -273,26 +249,90 @@ selectCiclo.addEventListener('change', () => {
 })(jQuery);
 
 
+let inputElement = document.getElementById("buscadordocente");
+// inputElement.addEventListener("input", (event) => {
+//   const soloLetrasRegExp = /^[a-zA-Z]+$/; // Expresión regular que solo permite letras
+//   const inputText = event.target.value;
+  
+//   if (!soloLetrasRegExp.test(inputText)) {
+//     event.target.value = inputText.replace(/[^a-zA-Z]/g, ""); // Remueve todos los caracteres que no sean letras
+//   }
+// });
+
+function getPageList(totalPages, page, maxLength){
+  function range(start,end){
+    return Array.from(Array(end-start+1),(_,i)=> i +start);
+  }
+
+  var sideWitdh = maxLength < 9 ? 1 : 2;
+  var leftWidth = (maxLength -sideWitdh*2-3) >> 1;
+  var rightWidth = (maxLength -sideWitdh*2-3) >> 1;
+  
+  if(totalPages <= maxLength){
+    return range (1,totalPages);
+  }
+
+  if(page <= maxLength - sideWitdh - 1 - rightWidth){
+    return range(1,maxLength-sideWitdh-1).concat(0,range(totalPages-sideWitdh+1, totalPages));
+  }
+
+  if(page >= totalPages - sideWitdh - 1 - rightWidth){
+    return range(1,sideWitdh).concat(0,range(totalPages-sideWitdh-1 - rightWidth - leftWidth, totalPages));
+  }
+
+    return range(1, sideWitdh).concat(0, range(page - leftWidth, page + rightWidth),0, range(totalPages - sideWitdh + 1, totalPages));
+}
+
 $(function(){
   var numberOfItems = $(".contenido .c").length;
-  var limitPerPAge = 8;
+  var limitPerPAge = $(window).width() < 992 ? 4 : $(window).width() < 1200 ? 6 : 8;
   var totalPages = Math.ceil(numberOfItems/limitPerPAge);
   var paginationSize = 5;
   var currentPage;
 
   function showPage(whichPage){
     if(whichPage<1||whichPage>totalPages) return false;
-
     currentPage = whichPage;
 
-    $(".contenido .c").hide().slice((currentPage-1)*limitPerPAge,currentPage*limitPerPAge).show();
+    
 
+    let items = $(".contenido .c");
+    let filteredItems = items.filter(function () {
+      return $(this).find(".nombre-docente").text().toLowerCase().includes(inputElement.value.toLowerCase());
+    });
+
+    numberOfItems = filteredItems.length;
+    const notfound = $(".contenido").find('.not-found');
+    if (filteredItems.length === 0) {
+      if (!notfound.length) {
+        const newNotFound = $('<p></p>').addClass('not-found').text('No se encontraron docentes');
+        newNotFound.appendTo('.contenido');
+      }
+    } else {
+      if (notfound.length) {
+        $(".contenido").find('.not-found').remove();
+      }
+      let startIndex = (currentPage - 1) * limitPerPAge;
+      let endIndex = startIndex + limitPerPAge;
+
+    items.hide();
+    filteredItems.slice(startIndex, endIndex).show();
+
+    totalPages = Math.ceil(numberOfItems/limitPerPAge);   
     $(".pagination li").slice(1,-1).remove();
     
-    getPageList(totalPages, currentPage, paginationSize).forEach(item=>{
-      $("<li>").addClass("page-item").addClass(item ? "current-page" : "dots")
-      .toggleClass("active",item===currentPage).append($("<a>").addClass("page-link")
-      .attr({href:"javascript:void(0)"}).text(item||"...")).insertBefore(".next-page");
+    getPageList(totalPages, currentPage, paginationSize).forEach((item) => {
+      $("<li>")
+        .addClass("page-item")
+        .addClass(item ? "current-page" : "dots")
+        .toggleClass("active", item === currentPage)
+        .append(
+          $("<a>")
+            .addClass("page-link")
+            .attr({ href: "javascript:void(0)" })
+            .text(item || "...")
+        )
+        .insertBefore(".next-page");
     });
 
     $(".prev-page").toggleClass("disabled", currentPage===1);
@@ -300,14 +340,32 @@ $(function(){
 
     return true;
   }
+  }
+
+  document.addEventListener("keyup",e=>{
+    if(e.target.matches('#buscadordocente')){
+      if(e.key === "Escape")e.target.value = ""
+      document.querySelectorAll('.e-docente').forEach(docente =>{
+        var ndocente = docente.querySelector('.nombre-docente');
+        if(ndocente.textContent.toLowerCase().includes(e.target.value.toLowerCase())){
+          docente.style.display = '';
+        }else{
+          docente.style.display = 'none';
+        }
+      })
+    }
+    showPage(1);
+    if(e.target.value==""){
+      numberOfItems = $(".contenido .c").length;
+      showPage(1);
+    }
+  });
 
   $(".pagination").append(
-    $("<li>").addClass("page-item").addClass("prev-page").append($("<a>").addClass("page-link scrollto").attr({href:"#plana"}).text("Anterior")),
-    $("<li>").addClass("page-item").addClass("next-page").append($("<a>").addClass("page-link scrollto").attr({href:"#plana"}).append($("<span>&raquo;</span>")))
-
+    $("<li>").addClass("page-item").addClass("prev-page").append($("<a>").addClass("page-link").text("Anterior")),
+    $("<li>").addClass("page-item").addClass("next-page").append($("<a>").addClass("page-link").attr({href:"javascript:void(0)"}).append($("<span>&raquo;</span>")))
   );
 
-  $(".contenido").show();
   showPage(1);
 
   $(document).on("click",".pagination li.current-page:not(.active)",function(){
@@ -321,6 +379,14 @@ $(function(){
   $(".prev-page").on("click",function(){
     return showPage(currentPage - 1);
   });
+
+  $(window).resize(function() {
+    limitPerPAge = $(window).width() < 992 ? 4 : $(window).width() < 1200 ? 6 : 8;
+    totalPages = Math.ceil(numberOfItems/limitPerPAge);
+    currentPage = 1;
+    showPage(currentPage);
+  });
+
 });
 
 
